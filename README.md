@@ -37,25 +37,48 @@ flowchart TD
 
 ## Quick Start
 
+### 1. Prepare Data Files
+
+Place the following files in `data/raw/`:
+
+- **therapist.csv** (encoding: cp932)
+  - Required columns: 職員ID, 漢字氏名, 性別, 職種, 担当病棟, 専従
+  
+- **prescription.csv** (encoding: cp932)
+  - Required columns: 患者ID, 氏名, 病棟, 担当療法士, 算定区分, 入浴, 排泄, その他指定時間
+  
+- **shift_202510.xlsx**
+  - Therapist availability schedule for October 2025
+  - Format: Row 2+ contains therapist names in column 4, dates in columns 5+
+  - Availability codes: ○ (full day), AN (afternoon), PN (morning)
+
+### 2. Run Scheduling Workflow
+
 ```bash
 # Install dependencies
 uv sync
 
 # Preprocess raw data
-uv run schedule-agent preprocess
+uv run python -m schedule_agent.cli preprocess --date 2025-10-04
 
 # Run scheduler for specific date
-uv run schedule-agent schedule --date 2025-10-04
+uv run python -m schedule_agent.cli schedule --date 2025-10-04
 
-# Visualize schedule
-uv run schedule-agent visualize --date 2025-10-04
+# Generate Excel output
+uv run python -m schedule_agent.cli visualize --date 2025-10-04
 ```
+
+Output: `data/processed/schedule_2025-10-04.xlsx` with 4 sheets:
+- **詳細**: Detailed assignment list
+- **患者別スケジュール**: Patient schedule with attributes (氏名, 病棟, 担当療法士, 算定区分)
+- **職員別スケジュール**: Staff schedule with attributes (漢字氏名, 性別, 職種, 担当病棟)
+- **サマリー**: Summary statistics
 
 ## Interactive Optimization
 
 ```bash
 # Start conversational optimization
-uv run schedule-agent optimize --date 2025-10-04
+uv run python -m schedule_agent.cli optimize --date 2025-10-04
 ```
 
 ### Conversation Example (Japanese)
