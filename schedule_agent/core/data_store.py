@@ -82,13 +82,32 @@ class DataStore:
         return self.copy_input(source_path, self.shift_file)
     
     # Raw Data Loading
+    def _detect_encoding(self, file_path: Path) -> str:
+        """Detect file encoding, fallback to cp932 for Japanese files."""
+        try:
+            import chardet
+            with open(file_path, 'rb') as f:
+                raw_data = f.read()
+                result = chardet.detect(raw_data)
+                return result['encoding'] or 'cp932'
+        except ImportError:
+            # Fallback: try utf-8 first, then cp932
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    f.read()
+                return 'utf-8'
+            except UnicodeDecodeError:
+                return 'cp932'
+    
     def load_therapists(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.therapist_file
-        return pd.read_csv(path, encoding="cp932")
+        encoding = self._detect_encoding(path)
+        return pd.read_csv(path, encoding=encoding)
     
     def load_prescriptions(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.prescription_file
-        return pd.read_csv(path, encoding="cp932")
+        encoding = self._detect_encoding(path)
+        return pd.read_csv(path, encoding=encoding)
     
     def load_shifts(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.shift_file

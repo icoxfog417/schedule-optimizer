@@ -118,14 +118,14 @@ class ConstraintMatrixBuilder:
             for j, therapist_id in enumerate(therapist_ids):
                 therapist = therapists[therapists['職員ID'] == therapist_id].iloc[0]
                 
+                # Check 専従 constraint FIRST (overrides everything)
+                if therapist['専従'] and therapist['担当病棟'] != patient_ward:
+                    matrix[i, j] = 0
+                    continue
+                
                 # Primary therapist
                 if therapist_id == primary_therapist_id:
                     matrix[i, j] = 100
-                    continue
-                
-                # Check 専従 constraint
-                if therapist['専従'] and therapist['担当病棟'] != patient_ward:
-                    matrix[i, j] = 0
                     continue
                 
                 # Calculate compatibility score

@@ -114,7 +114,6 @@ class DeterministicScheduler:
             
             # Mark this slot-therapist pair as used
             cost_matrix[slot_i, :] = 1000
-            cost_matrix[:, therapist_j] = 1000
             
             assigned_slots += 1
         

@@ -27,11 +27,16 @@ class DataNormalizer:
         # Extract day from date (e.g., "2025-10-04" -> "4")
         day = target_date.split('-')[-1].lstrip('0')
         
-        # Find column that starts with the day number
+        # Find column that contains the day number
+        # Format is like " 1\n水" or " 1_x000D_\n水"
         date_col = None
         for col in df.columns[4:]:
             col_str = str(col).strip()
-            if col_str.startswith(f' {day}_') or col_str.startswith(f'{day}_'):
+            # Handle both formats: with newline and with _x000D_
+            if (col_str.startswith(f' {day}\n') or 
+                col_str.startswith(f'{day}\n') or
+                col_str.startswith(f' {day}_') or
+                col_str.startswith(f'{day}_')):
                 date_col = col
                 break
         
