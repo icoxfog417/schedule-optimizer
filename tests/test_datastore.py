@@ -1,4 +1,5 @@
 import pytest
+from pathlib import Path
 import pandas as pd
 import numpy as np
 
@@ -9,6 +10,11 @@ from schedule_agent.models.data_models import ConstraintMatrices
 
 class TestDataStore:
     """Test DataStore functionality."""
+    
+    @pytest.fixture
+    def test_data_dir(self):
+        """Return path to test data directory."""
+        return Path(__file__).parent / "data"
     
     def test_session_management(self):
         """Test DataStore session management."""
@@ -45,15 +51,15 @@ class TestDataStore:
         # Only outer session should cleanup
         assert not outer_path.exists()
     
-    def test_file_operations(self):
+    def test_file_operations(self, test_data_dir):
         """Test file copying and loading."""
         store = DataStore()
         
         with store.session():
             # Test file copying
-            store.copy_therapist_file("data/raw/therapist.csv")
-            store.copy_prescription_file("data/raw/prescription.csv") 
-            store.copy_shift_file("data/raw/shift_202510.xlsx")
+            store.copy_therapist_file(test_data_dir / "therapist.csv")
+            store.copy_prescription_file(test_data_dir / "prescription.csv") 
+            store.copy_shift_file(test_data_dir / "shift_test.xlsx")
             
             # Test data loading
             therapists = store.load_therapists()
@@ -63,9 +69,9 @@ class TestDataStore:
             assert isinstance(therapists, pd.DataFrame)
             assert isinstance(prescriptions, pd.DataFrame)
             assert isinstance(shifts, pd.DataFrame)
-            assert len(therapists) > 0
-            assert len(prescriptions) > 0
-            assert len(shifts) > 0
+            assert len(therapists) == 3
+            assert len(prescriptions) == 3
+            assert len(shifts) == 3
     
     def test_normalized_data_operations(self):
         """Test normalized data save/load operations."""
@@ -119,41 +125,46 @@ class TestDataStore:
 class TestSchedulingPipeline:
     """Test SchedulingPipeline with DataStore."""
     
-    def test_pipeline_preprocessing(self):
+    @pytest.fixture
+    def test_data_dir(self):
+        """Return path to test data directory."""
+        return Path(__file__).parent / "data"
+    
+    def test_pipeline_preprocessing(self, test_data_dir):
         """Test pipeline preprocessing steps."""
         store = DataStore()
         
         with store.session():
-            store.copy_therapist_file("data/raw/therapist.csv")
-            store.copy_prescription_file("data/raw/prescription.csv") 
-            store.copy_shift_file("data/raw/shift_202510.xlsx")
+            store.copy_therapist_file(test_data_dir / "therapist.csv")
+            store.copy_prescription_file(test_data_dir / "prescription.csv") 
+            store.copy_shift_file(test_data_dir / "shift_test.xlsx")
             
             pipeline = SchedulingPipeline(store)
             
             # Test individual preprocessing steps
             pipeline.preprocess_therapists()
             therapists = store.load_normalized_therapists()
-            assert len(therapists) > 0
+            assert len(therapists) == 3
             assert '専従' in therapists.columns
             
             pipeline.preprocess_prescriptions()
             prescriptions = store.load_normalized_prescriptions()
-            assert len(prescriptions) > 0
+            assert len(prescriptions) == 3
             
             pipeline.preprocess_shifts("2025-10-04")
             shifts = store.load_normalized_shifts()
-            assert len(shifts) > 0
+            assert len(shifts) == 3
             assert 'therapist_name' in shifts.columns
             assert 'availability' in shifts.columns
     
-    def test_pipeline_constraint_building(self):
+    def test_pipeline_constraint_building(self, test_data_dir):
         """Test pipeline constraint matrix building."""
         store = DataStore()
         
         with store.session():
-            store.copy_therapist_file("data/raw/therapist.csv")
-            store.copy_prescription_file("data/raw/prescription.csv") 
-            store.copy_shift_file("data/raw/shift_202510.xlsx")
+            store.copy_therapist_file(test_data_dir / "therapist.csv")
+            store.copy_prescription_file(test_data_dir / "prescription.csv") 
+            store.copy_shift_file(test_data_dir / "shift_test.xlsx")
             
             pipeline = SchedulingPipeline(store)
             pipeline.preprocess_all("2025-10-04")
@@ -163,17 +174,17 @@ class TestSchedulingPipeline:
             matrices = store.load_all_matrices()
             assert matrices.patient_availability.shape[1] == 18  # 18 timeslots
             assert matrices.therapist_availability.shape[1] == 18
-            assert len(matrices.patient_ids) > 0
-            assert len(matrices.therapist_ids) > 0
+            assert len(matrices.patient_ids) == 3
+            assert len(matrices.therapist_ids) == 3
     
-    def test_full_pipeline(self):
+    def test_full_pipeline(self, test_data_dir):
         """Test complete pipeline execution."""
         store = DataStore()
         
         with store.session():
-            store.copy_therapist_file("data/raw/therapist.csv")
-            store.copy_prescription_file("data/raw/prescription.csv") 
-            store.copy_shift_file("data/raw/shift_202510.xlsx")
+            store.copy_therapist_file(test_data_dir / "therapist.csv")
+            store.copy_prescription_file(test_data_dir / "prescription.csv") 
+            store.copy_shift_file(test_data_dir / "shift_test.xlsx")
             
             pipeline = SchedulingPipeline(store)
             
