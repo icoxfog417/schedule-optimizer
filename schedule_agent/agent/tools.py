@@ -95,8 +95,7 @@ def create_schedule_tools(data_store: DataStore):
             therapist_id: Optional therapist ID to filter assignments
             
         Returns:
-            Dictionary with assignments list. Each assignment contains patient_id, therapist_id, timeslot, duration_minutes.
-            If no filters provided, returns all assignments.
+            Dictionary with enriched assignments list including patient and therapist attributes.
         """
         if not data_store.load_schedule():
             raise ScheduleNotAvailableError("No schedule available. Create a schedule first using create_schedule()")
@@ -116,6 +115,8 @@ def create_schedule_tools(data_store: DataStore):
             )
         
         assignments = data_store.load_schedule().assignments
+        therapists_df = data_store.load_normalized_therapists()
+        prescriptions_df = data_store.load_normalized_prescriptions()
         
         if patient_id:
             assignments = [a for a in assignments if a.patient_id == patient_id]
@@ -123,16 +124,36 @@ def create_schedule_tools(data_store: DataStore):
         if therapist_id:
             assignments = [a for a in assignments if a.therapist_id == therapist_id]
         
+        # Enrich assignments with attributes
+        enriched_assignments = []
+        for a in assignments:
+            assignment_data = {
+                "patient_id": a.patient_id,
+                "therapist_id": a.therapist_id,
+                "timeslot": a.timeslot,
+                "duration_minutes": a.duration_minutes,
+            }
+            
+            # Add patient attributes
+            patient_row = prescriptions_df[prescriptions_df['患者ID'] == a.patient_id]
+            if not patient_row.empty:
+                assignment_data["patient_name"] = patient_row.iloc[0]['氏名']
+                assignment_data["patient_ward"] = patient_row.iloc[0]['病棟']
+                assignment_data["primary_therapist"] = patient_row.iloc[0]['担当療法士']
+                assignment_data["category"] = patient_row.iloc[0]['算定区分']
+            
+            # Add therapist attributes
+            therapist_row = therapists_df[therapists_df['職員ID'] == a.therapist_id]
+            if not therapist_row.empty:
+                assignment_data["therapist_name"] = therapist_row.iloc[0]['漢字氏名']
+                assignment_data["therapist_gender"] = therapist_row.iloc[0]['性別']
+                assignment_data["therapist_profession"] = therapist_row.iloc[0]['職種']
+                assignment_data["therapist_ward"] = therapist_row.iloc[0]['担当病棟']
+            
+            enriched_assignments.append(assignment_data)
+        
         return {
-            "assignments": [
-                {
-                    "patient_id": a.patient_id,
-                    "therapist_id": a.therapist_id,
-                    "timeslot": a.timeslot,
-                    "duration_minutes": a.duration_minutes,
-                }
-                for a in assignments
-            ],
+            "assignments": enriched_assignments,
             "filter": {
                 "patient_id": patient_id,
                 "therapist_id": therapist_id,

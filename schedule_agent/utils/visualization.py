@@ -17,7 +17,7 @@ class ScheduleVisualizer:
         """
         # Load schedule and data from data_store
         schedule = data_store.load_schedule()
-        matrices = data_store.load_constraint_matrices()
+        matrices = data_store.load_all_matrices()
         therapists_df = data_store.load_normalized_therapists()
         prescriptions_df = data_store.load_normalized_prescriptions()
         

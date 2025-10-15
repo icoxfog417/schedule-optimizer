@@ -98,7 +98,7 @@ def render_mermaid(mermaid_code):
     </body>
     </html>
     """
-    components.html(html)
+    components.html(html, height=600, scrolling=True)
 
 
 # Initialize session state

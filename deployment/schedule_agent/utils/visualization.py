@@ -1,12 +1,14 @@
 import pandas as pd
 from pathlib import Path
+from typing import Type
 from schedule_agent.core.data_store import DataStore
+from schedule_agent.models.data_models import Schedule
 
 
 class ScheduleVisualizer:
     """Generate schedule visualizations."""
     
-    def export_to_excel(self, data_store: DataStore, output_path: Path) -> None:
+    def export_to_excel(self, data_store: Type[DataStore], output_path: Path) -> None:
         """Export schedule to Excel format.
         
         Args:
@@ -15,7 +17,7 @@ class ScheduleVisualizer:
         """
         # Load schedule and data from data_store
         schedule = data_store.load_schedule()
-        matrices = data_store.load_constraint_matrices()
+        matrices = data_store.load_all_matrices()
         therapists_df = data_store.load_normalized_therapists()
         prescriptions_df = data_store.load_normalized_prescriptions()
         

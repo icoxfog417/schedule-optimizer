@@ -125,30 +125,50 @@ def main():
     else:
         # Original local mode
         data_store = DataStore()
-        agent = create_schedule_agent(data_store)
         
-        print("Hospital Schedule Agent initialized.")
-        print("Type 'exit' or 'quit' to end the session.\n")
+        with data_store.session():
+            # Load test data files
+            test_data_dir = Path("data")
+            if test_data_dir.exists():
+                therapist_file = test_data_dir / "therapist.csv"
+                prescription_file = test_data_dir / "prescription.csv"
+                shift_files = list(test_data_dir.glob("*.xlsx"))
+                
+                if therapist_file.exists():
+                    data_store.copy_therapist_file(str(therapist_file))
+                    print(f"✓ Loaded therapist data from {therapist_file.name}")
+                
+                if prescription_file.exists():
+                    data_store.copy_prescription_file(str(prescription_file))
+                    print(f"✓ Loaded prescription data from {prescription_file.name}")
+                
+                if shift_files:
+                    data_store.copy_shift_file(str(shift_files[0]))
+                    print(f"✓ Loaded shift data from {shift_files[0].name}")
+            
+            agent = create_schedule_agent(data_store)
+            
+            print("\nHospital Schedule Agent initialized.")
+            print("Type 'exit' or 'quit' to end the session.\n")
         
-        try:
-            while True:
-                user_input = input("You: ").strip()
-                
-                if user_input.lower() in ['exit', 'quit']:
-                    print("Ending session...")
-                    break
-                
-                if not user_input:
-                    continue
-                
-                response = agent(user_input)
-                print(f"\nAgent: {response}\n")
+            try:
+                while True:
+                    user_input = input("You: ").strip()
+                    
+                    if user_input.lower() in ['exit', 'quit']:
+                        print("Ending session...")
+                        break
+                    
+                    if not user_input:
+                        continue
+                    
+                    response = agent(user_input)
+                    print(f"\nAgent: {response}\n")
+            
+            except KeyboardInterrupt:
+                print("\n\nSession interrupted by user.")
         
-        except KeyboardInterrupt:
-            print("\n\nSession interrupted by user.")
-        finally:
-            data_store.cleanup()
-            print("Session ended.")
+        print("Session ended.")
 
 
 if __name__ == "__main__":
