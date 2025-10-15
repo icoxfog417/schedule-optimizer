@@ -1,26 +1,8 @@
 import pandas as pd
-from pathlib import Path
-import json
-
-
-class DataLoader:
-    """Load CSV/Excel with cp932 encoding."""
-    
-    def __init__(self, data_dir: Path = Path("data/raw")):
-        self.data_dir = data_dir
-    
-    def load_therapists(self) -> pd.DataFrame:
-        return pd.read_csv(self.data_dir / "therapist.csv", encoding="cp932")
-    
-    def load_prescriptions(self) -> pd.DataFrame:
-        return pd.read_csv(self.data_dir / "prescription.csv", encoding="cp932")
-    
-    def load_shifts(self, year_month: str) -> pd.DataFrame:
-        return pd.read_excel(self.data_dir / f"shift_{year_month}.xlsx", header=1)
 
 
 class DataNormalizer:
-    """Normalize ward names, therapist IDs, time formats."""
+    """Pure data transformation - no I/O dependencies."""
     
     WARD_MAP = {
         '3階東病棟': '3E', '3階西病棟': '3W', '3階新病棟': '3W',
@@ -28,19 +10,19 @@ class DataNormalizer:
         '5階東病棟': '5E', '5階西病棟': '5W'
     }
     
-    def normalize_therapists(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df['専従'] = df['専従'] == '〇'
-        return df
+    def normalize_therapists(self, therapists: pd.DataFrame) -> pd.DataFrame:
+        normalized = therapists.copy()
+        normalized['専従'] = normalized['専従'] == '〇'
+        return normalized
     
-    def normalize_prescriptions(self, df: pd.DataFrame) -> pd.DataFrame:
-        df = df.copy()
-        df['病棟'] = df['病棟'].map(self.WARD_MAP)
-        return df
+    def normalize_prescriptions(self, prescriptions: pd.DataFrame) -> pd.DataFrame:
+        normalized = prescriptions.copy()
+        normalized['病棟'] = normalized['病棟'].map(self.WARD_MAP)
+        return self._normalize_time_formats(normalized)
     
-    def normalize_shifts(self, df: pd.DataFrame, target_date: str) -> pd.DataFrame:
+    def normalize_shifts(self, shifts: pd.DataFrame, target_date: str) -> pd.DataFrame:
         """Extract availability for target date."""
-        df = df.copy()
+        df = shifts.copy()
         
         # Extract day from date (e.g., "2025-10-04" -> "4")
         day = target_date.split('-')[-1].lstrip('0')
@@ -62,25 +44,7 @@ class DataNormalizer:
         })
         
         return result.dropna(subset=['therapist_name'])
-
-
-class InterimWriter:
-    """Save processed data to data/interim/."""
     
-    def __init__(self, output_dir: Path = Path("data/interim")):
-        self.output_dir = output_dir
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-    
-    def save_therapists(self, df: pd.DataFrame):
-        df.to_csv(self.output_dir / "normalized_therapists.csv", index=False, encoding="utf-8")
-    
-    def save_prescriptions(self, df: pd.DataFrame):
-        df.to_csv(self.output_dir / "normalized_prescriptions.csv", index=False, encoding="utf-8")
-    
-    def save_shifts(self, df: pd.DataFrame):
-        df.to_csv(self.output_dir / "normalized_shifts.csv", index=False, encoding="utf-8")
-    
-    def save_name_mapping(self, therapists_df: pd.DataFrame):
-        mapping = dict(zip(therapists_df['漢字氏名'], therapists_df['職員ID']))
-        with open(self.output_dir / "name_to_id_mapping.json", "w", encoding="utf-8") as f:
-            json.dump(mapping, f, ensure_ascii=False, indent=2)
+    def _normalize_time_formats(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Normalize time format strings."""
+        return df

@@ -1,48 +1,42 @@
 import numpy as np
 import pandas as pd
-from pathlib import Path
 from ..models.data_models import ConstraintMatrices
 from ..utils.time_utils import generate_timeslots, parse_unavailable_times, check_shift_availability
 
 
 class ConstraintMatrixBuilder:
-    """Build all constraint matrices from preprocessed data."""
+    """Pure matrix building - receives data, returns matrices."""
     
-    def __init__(self, interim_dir: Path = Path("data/interim")):
-        self.interim_dir = interim_dir
+    def __init__(self):
         self.timeslots = generate_timeslots()
     
-    def build_all_matrices(self) -> ConstraintMatrices:
-        therapists_df = pd.read_csv(self.interim_dir / "normalized_therapists.csv")
-        prescriptions_df = pd.read_csv(self.interim_dir / "normalized_prescriptions.csv")
-        shifts_df = pd.read_csv(self.interim_dir / "normalized_shifts.csv")
-        
+    def build_matrices(self, therapists: pd.DataFrame, 
+                      prescriptions: pd.DataFrame, 
+                      shifts: pd.DataFrame) -> ConstraintMatrices:
+        """Build all matrices from normalized data."""
         # Get unique patients and therapists
-        patient_ids = prescriptions_df['患者ID'].unique().tolist()
-        therapist_ids = therapists_df['職員ID'].unique().tolist()
-        
-        # Build matrices
-        patient_avail = self._build_patient_availability(prescriptions_df, patient_ids)
-        therapist_avail = self._build_therapist_availability(therapists_df, shifts_df, therapist_ids)
-        compatibility = self._build_compatibility(prescriptions_df, therapists_df, patient_ids, therapist_ids)
-        requirements = self._build_requirements(prescriptions_df, patient_ids)
+        patient_ids = prescriptions['患者ID'].unique().tolist()
+        therapist_ids = therapists['職員ID'].unique().tolist()
         
         return ConstraintMatrices(
-            patient_availability=patient_avail,
-            therapist_availability=therapist_avail,
-            compatibility=compatibility,
-            requirements=requirements,
+            patient_availability=self.build_patient_availability(prescriptions, patient_ids),
+            therapist_availability=self.build_therapist_availability(therapists, shifts, therapist_ids),
+            compatibility=self.build_compatibility(therapists, prescriptions, patient_ids, therapist_ids),
+            requirements=self.build_requirements(prescriptions, patient_ids),
             patient_ids=patient_ids,
             therapist_ids=therapist_ids,
             timeslots=self.timeslots
         )
     
-    def _build_patient_availability(self, prescriptions_df: pd.DataFrame, patient_ids: list[str]) -> np.ndarray:
+    def build_patient_availability(self, prescriptions: pd.DataFrame, patient_ids: list[str] = None) -> np.ndarray:
         """Build patient × timeslot availability matrix."""
+        if patient_ids is None:
+            patient_ids = prescriptions['患者ID'].unique().tolist()
+        
         matrix = np.ones((len(patient_ids), len(self.timeslots)), dtype=int)
         
         for i, patient_id in enumerate(patient_ids):
-            patient = prescriptions_df[prescriptions_df['患者ID'] == patient_id].iloc[0]
+            patient = prescriptions[prescriptions['患者ID'] == patient_id].iloc[0]
             
             unavailable_slots = []
             
@@ -66,19 +60,21 @@ class ConstraintMatrixBuilder:
         
         return matrix
     
-    def _build_therapist_availability(self, therapists_df: pd.DataFrame, shifts_df: pd.DataFrame, therapist_ids: list[str]) -> np.ndarray:
+    def build_therapist_availability(self, therapists: pd.DataFrame, 
+                                   shifts: pd.DataFrame, 
+                                   therapist_ids: list[str] = None) -> np.ndarray:
         """Build therapist × timeslot availability matrix."""
-        matrix = np.zeros((len(therapist_ids), len(self.timeslots)), dtype=int)
+        if therapist_ids is None:
+            therapist_ids = therapists['職員ID'].unique().tolist()
         
-        # Create name to ID mapping
-        name_to_id = dict(zip(therapists_df['漢字氏名'], therapists_df['職員ID']))
+        matrix = np.zeros((len(therapist_ids), len(self.timeslots)), dtype=int)
         
         for i, therapist_id in enumerate(therapist_ids):
             # Find therapist name
-            therapist_name = therapists_df[therapists_df['職員ID'] == therapist_id]['漢字氏名'].iloc[0]
+            therapist_name = therapists[therapists['職員ID'] == therapist_id]['漢字氏名'].iloc[0]
             
             # Find shift entry
-            shift_entry = shifts_df[shifts_df['therapist_name'] == therapist_name]
+            shift_entry = shifts[shifts['therapist_name'] == therapist_name]
             if shift_entry.empty:
                 continue
             
@@ -91,15 +87,23 @@ class ConstraintMatrixBuilder:
         
         return matrix
     
-    def _build_compatibility(self, prescriptions_df: pd.DataFrame, therapists_df: pd.DataFrame, patient_ids: list[str], therapist_ids: list[str]) -> np.ndarray:
+    def build_compatibility(self, therapists: pd.DataFrame, 
+                          prescriptions: pd.DataFrame,
+                          patient_ids: list[str] = None,
+                          therapist_ids: list[str] = None) -> np.ndarray:
         """Build patient × therapist compatibility matrix."""
+        if patient_ids is None:
+            patient_ids = prescriptions['患者ID'].unique().tolist()
+        if therapist_ids is None:
+            therapist_ids = therapists['職員ID'].unique().tolist()
+        
         matrix = np.zeros((len(patient_ids), len(therapist_ids)), dtype=int)
         
         # Create name to ID mapping
-        name_to_id = dict(zip(therapists_df['漢字氏名'], therapists_df['職員ID']))
+        name_to_id = dict(zip(therapists['漢字氏名'], therapists['職員ID']))
         
         for i, patient_id in enumerate(patient_ids):
-            patient = prescriptions_df[prescriptions_df['患者ID'] == patient_id].iloc[0]
+            patient = prescriptions[prescriptions['患者ID'] == patient_id].iloc[0]
             patient_ward = patient['病棟']
             primary_therapist_name = patient.get('担当療法士')
             
@@ -107,12 +111,12 @@ class ConstraintMatrixBuilder:
             primary_therapist_id = name_to_id.get(primary_therapist_name)
             primary_gender = None
             if primary_therapist_id:
-                primary_info = therapists_df[therapists_df['職員ID'] == primary_therapist_id]
+                primary_info = therapists[therapists['職員ID'] == primary_therapist_id]
                 if not primary_info.empty:
                     primary_gender = primary_info.iloc[0]['性別']
             
             for j, therapist_id in enumerate(therapist_ids):
-                therapist = therapists_df[therapists_df['職員ID'] == therapist_id].iloc[0]
+                therapist = therapists[therapists['職員ID'] == therapist_id].iloc[0]
                 
                 # Primary therapist
                 if therapist_id == primary_therapist_id:
@@ -135,12 +139,15 @@ class ConstraintMatrixBuilder:
         
         return matrix
     
-    def _build_requirements(self, prescriptions_df: pd.DataFrame, patient_ids: list[str]) -> np.ndarray:
+    def build_requirements(self, prescriptions: pd.DataFrame, patient_ids: list[str] = None) -> np.ndarray:
         """Build therapy requirements vector."""
+        if patient_ids is None:
+            patient_ids = prescriptions['患者ID'].unique().tolist()
+        
         requirements = np.zeros(len(patient_ids), dtype=int)
         
         for i, patient_id in enumerate(patient_ids):
-            patient = prescriptions_df[prescriptions_df['患者ID'] == patient_id].iloc[0]
+            patient = prescriptions[prescriptions['患者ID'] == patient_id].iloc[0]
             therapy_type = patient.get('算定区分', '')
             
             if '脳血管疾患' in str(therapy_type):
@@ -149,37 +156,3 @@ class ConstraintMatrixBuilder:
                 requirements[i] = 120
         
         return requirements
-    
-    def save_matrices(self, matrices: ConstraintMatrices):
-        """Save matrices to .npy files."""
-        np.save(self.interim_dir / "patient_availability.npy", matrices.patient_availability)
-        np.save(self.interim_dir / "therapist_availability.npy", matrices.therapist_availability)
-        np.save(self.interim_dir / "compatibility.npy", matrices.compatibility)
-        np.save(self.interim_dir / "requirements.npy", matrices.requirements)
-        
-        # Save metadata
-        import json
-        metadata = {
-            "patient_ids": matrices.patient_ids,
-            "therapist_ids": matrices.therapist_ids,
-            "timeslots": matrices.timeslots
-        }
-        with open(self.interim_dir / "matrices_metadata.json", "w") as f:
-            json.dump(metadata, f, indent=2)
-    
-    def load_matrices(self) -> ConstraintMatrices:
-        """Load matrices from .npy files."""
-        import json
-        
-        with open(self.interim_dir / "matrices_metadata.json", "r") as f:
-            metadata = json.load(f)
-        
-        return ConstraintMatrices(
-            patient_availability=np.load(self.interim_dir / "patient_availability.npy"),
-            therapist_availability=np.load(self.interim_dir / "therapist_availability.npy"),
-            compatibility=np.load(self.interim_dir / "compatibility.npy"),
-            requirements=np.load(self.interim_dir / "requirements.npy"),
-            patient_ids=metadata["patient_ids"],
-            therapist_ids=metadata["therapist_ids"],
-            timeslots=metadata["timeslots"]
-        )
