@@ -71,21 +71,19 @@ def create_schedule_tools(data_store: DataStore):
             output_path: Path where Excel file should be saved
             
         Returns:
-            Dictionary with file_path
+            Dictionary with file_path and base64-encoded file_content
         """
         if not data_store.load_schedule():
             raise ScheduleNotAvailableError("No schedule available. Create a schedule first using create_schedule()")
         
-        therapists = data_store.load_normalized_therapists()
-        prescriptions = data_store.load_normalized_prescriptions()
+        visualizer.export_to_excel(data_store, Path(output_path))
         
-        visualizer.export_to_excel(
-            data_store.load_schedule(), 
-            therapists, 
-            prescriptions, 
-            Path(output_path)
-        )
-        return {"file_path": output_path}
+        # Read and encode file for client download
+        import base64
+        with open(output_path, 'rb') as f:
+            file_content = base64.b64encode(f.read()).decode()
+        
+        return {"file_path": output_path, "file_content": file_content}
     
     @tool
     def get_schedule_data(patient_id: Optional[str] = None, 

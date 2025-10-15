@@ -1,19 +1,23 @@
 import pandas as pd
 from pathlib import Path
-from ..models.data_models import Schedule, ConstraintMatrices
+from schedule_agent.core.data_store import DataStore
 
 
 class ScheduleVisualizer:
     """Generate schedule visualizations."""
     
-    def export_to_excel(self, schedule: Schedule, matrices: ConstraintMatrices, output_path: Path):
-        """Export schedule to Excel format."""
-        from pathlib import Path
+    def export_to_excel(self, data_store: DataStore, output_path: Path) -> None:
+        """Export schedule to Excel format.
         
-        # Load master data for attributes
-        interim_dir = Path("data/interim")
-        therapists_df = pd.read_csv(interim_dir / "normalized_therapists.csv")
-        prescriptions_df = pd.read_csv(interim_dir / "normalized_prescriptions.csv")
+        Args:
+            data_store: DataStore instance to load schedule and data from
+            output_path: Path where Excel file should be saved
+        """
+        # Load schedule and data from data_store
+        schedule = data_store.load_schedule()
+        matrices = data_store.load_constraint_matrices()
+        therapists_df = data_store.load_normalized_therapists()
+        prescriptions_df = data_store.load_normalized_prescriptions()
         
         # Create DataFrame from assignments
         data = []
