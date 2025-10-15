@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.optimize import linear_sum_assignment
 from ..models.data_models import (
     ConstraintMatrices,
     Schedule,

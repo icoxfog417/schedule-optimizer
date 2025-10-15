@@ -1,4 +1,3 @@
-from datetime import time, timedelta
 
 
 def generate_timeslots() -> list[str]:

@@ -23,14 +23,14 @@
         "AWS_DOCUMENTATION_PARTITION": "aws"
       }
     },
-    "awslabs.aws-diagram-mcp-server": {
+    "awslabs.amazon-bedrock-agentcore-mcp-server": {
       "command": "uvx",
-      "args": ["awslabs.aws-diagram-mcp-server"],
+      "args": ["awslabs.amazon-bedrock-agentcore-mcp-server@latest"],
       "env": {
         "FASTMCP_LOG_LEVEL": "ERROR"
       },
-      "autoApprove": [],
-      "disabled": false
+      "disabled": false,
+      "autoApprove": []
     },
     "strands": {
       "command": "uvx",
@@ -70,6 +70,8 @@
     }
   },
   "resources": [
-    "file://spec/requirements.md"
+    "file://.amazonq/rules/principles.md",
+    "file://spec/requirements.md",
+    "file://spec/design.md"
   ]
 }

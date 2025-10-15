@@ -9,7 +9,6 @@ class ScheduleVisualizer:
     def export_to_excel(self, schedule: Schedule, matrices: ConstraintMatrices, output_path: Path):
         """Export schedule to Excel format."""
         from pathlib import Path
-        import pandas as pd
         
         # Load master data for attributes
         interim_dir = Path("data/interim")
