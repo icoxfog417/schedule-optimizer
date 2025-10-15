@@ -1,4 +1,3 @@
-import pytest
 from pathlib import Path
 from schedule_agent.core.data_store import DataStore
 

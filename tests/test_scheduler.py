@@ -1,11 +1,8 @@
-import pytest
-import numpy as np
 from pathlib import Path
-from schedule_agent.core.scheduler import DeterministicScheduler, ScheduleValidator
+from schedule_agent.core.scheduler import DeterministicScheduler
 from schedule_agent.core.data_store import DataStore
 from schedule_agent.core.preprocessor import DataNormalizer
 from schedule_agent.core.constraints_builder import ConstraintMatrixBuilder
-from schedule_agent.models.data_models import Schedule, Assignment
 
 
 class TestDeterministicScheduler:

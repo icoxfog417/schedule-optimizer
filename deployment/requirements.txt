@@ -1,0 +1,13 @@
+# Core dependencies
+click>=8.3.0
+openpyxl>=3.1.5
+pandas>=2.3.3
+scipy>=1.16.2
+
+# AI Agent framework
+strands-agents>=1.12.0
+strands-agents-tools>=0.2.11
+
+# AgentCore SDK - pinned to 0.1.7 due to CodeBuild environment limitation
+# CodeBuild only has bedrock-agentcore<=0.1.7 available in package index
+bedrock-agentcore==0.1.7

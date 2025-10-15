@@ -120,6 +120,90 @@ class TestDataStore:
             assert matrices.patient_ids == loaded.patient_ids
             assert matrices.therapist_ids == loaded.therapist_ids
             assert matrices.timeslots == loaded.timeslots
+    
+    def test_save_and_load_schedule(self):
+        """Test saving and loading schedule from pickle file."""
+        from schedule_agent.models.data_models import Schedule, Assignment
+        
+        # Create a test schedule
+        assignments = [
+            Assignment(
+                patient_id="P001",
+                therapist_id="T001",
+                timeslot="09:00-09:20",
+                duration_minutes=20
+            ),
+            Assignment(
+                patient_id="P001",
+                therapist_id="T001",
+                timeslot="09:20-09:40",
+                duration_minutes=20
+            ),
+        ]
+        
+        test_schedule = Schedule(
+            assignments=assignments,
+            date="2025-10-15",
+            unscheduled_patients=[]
+        )
+        
+        # Test save and load
+        store = DataStore()
+        with store.session():
+            # Save schedule
+            saved_path = store.save_schedule(test_schedule)
+            assert saved_path.exists()
+            assert saved_path.name == "current_schedule.pkl"
+            
+            # Check has_schedule
+            assert store.has_schedule() is True
+            
+            # Load schedule
+            loaded_schedule = store.load_schedule()
+            assert loaded_schedule is not None
+            assert loaded_schedule.date == "2025-10-15"
+            assert len(loaded_schedule.assignments) == 2
+            assert loaded_schedule.assignments[0].patient_id == "P001"
+            assert loaded_schedule.assignments[0].therapist_id == "T001"
+    
+    def test_load_nonexistent_schedule(self):
+        """Test loading schedule when none exists."""
+        store = DataStore()
+        with store.session():
+            # Should return None when no schedule exists
+            loaded_schedule = store.load_schedule()
+            assert loaded_schedule is None
+            
+            # has_schedule should return False
+            assert store.has_schedule() is False
+    
+    def test_export_schedule(self):
+        """Test exporting schedule to Excel (renamed from save_schedule)."""
+        from schedule_agent.models.data_models import Schedule, Assignment
+        
+        assignments = [
+            Assignment(
+                patient_id="P001",
+                therapist_id="T001",
+                timeslot="09:00-09:20",
+                duration_minutes=20
+            ),
+        ]
+        
+        test_schedule = Schedule(
+            assignments=assignments,
+            date="2025-10-15",
+            unscheduled_patients=[]
+        )
+        
+        store = DataStore()
+        with store.session():
+            # Export to Excel
+            store.export_schedule(test_schedule)
+            
+            # Check Excel file was created
+            excel_file = store._temp_dir / "processed" / "schedule_2025-10-15.xlsx"
+            assert excel_file.exists()
 
 
 class TestSchedulingPipeline:

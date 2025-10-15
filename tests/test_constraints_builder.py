@@ -1,4 +1,3 @@
-import pytest
 import numpy as np
 from pathlib import Path
 from schedule_agent.core.constraints_builder import ConstraintMatrixBuilder
