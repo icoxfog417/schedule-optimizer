@@ -1,15 +1,24 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: 'Streamlit app with CodeBuild, ECR, and ECS Fargate'
 
+Mappings:
+  CloudFrontPrefixLists:
+    us-east-1:
+      PrefixListId: pl-3b927c52
+    us-west-2:
+      PrefixListId: pl-82a045eb
+    ap-northeast-1:
+      PrefixListId: pl-58a04531
+    eu-west-1:
+      PrefixListId: pl-4fa04526
+    ap-southeast-1:
+      PrefixListId: pl-31a34658
+
 Parameters:
   GitHubRepo:
     Type: String
     Description: GitHub repository URL
-    Default: 'https://github.com/your-username/schedule-optimizer.git'
-  BaseImage:
-    Type: String
-    Description: Base Docker image
-    Default: 'python:3.11-slim'
+    Default: 'https://github.com/icoxfog417/schedule-optimizer.git'
 
 Resources:
   # ECR Repository
@@ -107,8 +116,6 @@ Resources:
             Value: schedule-agent-cluster
           - Name: ECS_SERVICE_NAME
             Value: schedule-agent-service
-          - Name: BASE_IMAGE
-            Value: !Ref BaseImage
       Source:
         Type: GITHUB
         Location: !Ref GitHubRepo
@@ -122,19 +129,20 @@ Resources:
                 - echo Creating Dockerfile...
                 - |
                   cat > Dockerfile << 'EOF'
-                  FROM $BASE_IMAGE
+                  FROM public.ecr.aws/docker/library/python:3.11-slim
                   
                   # Install uv
                   COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
                   
                   WORKDIR /app
                   
-                  # Copy uv files
+                  # Copy dependency files
                   COPY pyproject.toml uv.lock ./
                   
                   # Install dependencies
                   RUN uv sync --frozen
                   
+                  # Copy application code
                   COPY . .
                   
                   EXPOSE 8501
@@ -152,8 +160,6 @@ Resources:
                 - echo Build completed on `date`
                 - echo Pushing the Docker image...
                 - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
-                - echo Updating ECS service...
-                - aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
       Tags:
         - Key: Name
           Value: schedule-agent-build
@@ -260,6 +266,7 @@ Resources:
 
   PrivateRoute:
     Type: AWS::EC2::Route
+    DependsOn: NATGateway
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       DestinationCidrBlock: 0.0.0.0/0
@@ -312,7 +319,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
-          SourcePrefixListId: pl-3b927c52  # CloudFront prefix list
+          SourcePrefixListId: !FindInMap [CloudFrontPrefixLists, !Ref 'AWS::Region', PrefixListId]
       Tags:
         - Key: Name
           Value: schedule-agent-alb-sg
@@ -393,14 +400,11 @@ Resources:
             - GET
             - HEAD
           Compress: true
-          ForwardedValues:
-            QueryString: true
-            Headers:
-              - '*'
-            Cookies:
-              Forward: all
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled - allows WebSocket
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # CORS-S3Origin - forwards all headers
         Origins:
           - Id: VPCOrigin
+            DomainName: !GetAtt LoadBalancer.DNSName
             VpcOriginConfig:
               VpcOriginId: !Ref VPCOrigin
         PriceClass: PriceClass_100
@@ -449,9 +453,80 @@ Resources:
         - Key: Name
           Value: schedule-agent-task
 
+  # Lambda function to trigger CodeBuild
+  TriggerCodeBuildFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: schedule-agent-trigger-codebuild
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt TriggerCodeBuildRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          const { CodeBuildClient, StartBuildCommand } = require('@aws-sdk/client-codebuild');
+          const response = require('cfn-response');
+
+          exports.handler = async (event, context) => {
+            console.log('Event:', JSON.stringify(event, null, 2));
+            
+            const physicalResourceId = `CodeBuildTrigger-${event.ResourceProperties.ProjectName}`;
+            const responseData = {};
+            
+            try {
+              const codebuild = new CodeBuildClient({ 
+                region: process.env.AWS_REGION,
+                maxAttempts: 3
+              });
+
+              if (event.RequestType === 'Create' || event.RequestType === 'Update') {
+                const command = new StartBuildCommand({ 
+                  projectName: event.ResourceProperties.ProjectName 
+                });
+                const result = await codebuild.send(command);
+                responseData.BuildId = result.build.id;
+              }
+              
+              await response.send(event, context, response.SUCCESS, responseData, physicalResourceId);
+            } catch (error) {
+              console.error('Error:', error);
+              await response.send(event, context, response.FAILED, { Error: error.message }, physicalResourceId);
+            }
+          };
+
+  TriggerCodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: CodeBuildAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: codebuild:StartBuild
+                Resource: !GetAtt CodeBuildProject.Arn
+
+  # Custom resource to trigger CodeBuild
+  CodeBuildTrigger:
+    Type: AWS::CloudFormation::CustomResource
+    Properties:
+      ServiceToken: !GetAtt TriggerCodeBuildFunction.Arn
+      ProjectName: !Ref CodeBuildProject
+
   Service:
     Type: AWS::ECS::Service
-    DependsOn: HTTPListener
+    DependsOn: 
+      - HTTPListener
+      - CodeBuildTrigger
     Properties:
       ServiceName: schedule-agent-service
       Cluster: !Ref ECSCluster

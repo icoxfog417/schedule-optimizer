@@ -31,7 +31,7 @@ def encode_file(file_bytes):
     return base64.b64encode(file_bytes).decode()
 
 
-def invoke_agent(prompt, files=None):
+def invoke_agent(prompt, files=None, model=None):
     """Invoke AgentCore agent."""
     config = load_agentcore_config()
     agent_name = config['default_agent']
@@ -41,6 +41,8 @@ def invoke_agent(prompt, files=None):
     payload = {"prompt": prompt}
     if files:
         payload.update(files)
+    if model:
+        payload["model"] = model
     
     client = boto3.client('bedrock-agentcore', region_name=region)
     response = client.invoke_agent_runtime(
@@ -111,9 +113,27 @@ if 'messages' not in st.session_state:
 st.title("🏥 Hospital Schedule Agent")
 st.caption(f"Session: {st.session_state.session_id}")
 
+# Available models
+AVAILABLE_MODELS = {
+    "Claude Sonnet 4.1 (Default)": "claude-sonnet-4-1",
+    "Claude Sonnet 4.5": "claude-sonnet-4-5", 
+    "Claude Haiku 4.5": "claude-haiku-4-5",
+    "Claude Sonnet 3.7": "claude-sonnet-3-7"
+}
+
 # Sidebar for file upload
 with st.sidebar:
     st.header("📁 Upload Data Files")
+    
+    # Model selection
+    st.subheader("🤖 Model Selection")
+    selected_model_name = st.selectbox(
+        "Choose AI Model:",
+        options=list(AVAILABLE_MODELS.keys()),
+        index=0,
+        help="Select the Claude model to use for scheduling"
+    )
+    selected_model = AVAILABLE_MODELS[selected_model_name]
     
     therapist_file = st.file_uploader("therapist.csv", type=['csv'])
     prescription_file = st.file_uploader("prescription.csv", type=['csv'])
@@ -127,7 +147,7 @@ with st.sidebar:
         }
         
         with st.spinner("Uploading files..."):
-            response = invoke_agent("I've uploaded the data files. Please process them.", files)
+            response = invoke_agent("I've uploaded the data files. Please process them.", files, selected_model)
             result = response.get('result', str(response))
             st.session_state.messages.append({"role": "assistant", "content": result})
             st.rerun()
@@ -160,7 +180,7 @@ if prompt := st.chat_input("Ask the agent..."):
     
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
-            response = invoke_agent(prompt)
+            response = invoke_agent(prompt, model=selected_model)
             result = response.get('result', str(response))
             text, mermaid = extract_mermaid(result)
             st.markdown(text)

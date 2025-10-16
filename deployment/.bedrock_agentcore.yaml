@@ -23,7 +23,7 @@ agents:
     bedrock_agentcore:
       agent_id: schedule_agent-dQ4rzH2hQC
       agent_arn: arn:aws:bedrock-agentcore:us-east-1:872515288562:runtime/schedule_agent-dQ4rzH2hQC
-      agent_session_id: null
+      agent_session_id: ba5f93e6-2ca5-46b3-9e4c-b50c675e04e6
     codebuild:
       project_name: bedrock-agentcore-schedule_agent-builder
       execution_role: arn:aws:iam::872515288562:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-4cd60f4097

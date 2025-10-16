@@ -16,6 +16,13 @@ def invoke(payload):
     print(f"DEBUG: Session ID = {session_id}")
     print(f"DEBUG: Current sessions = {list(session_datastores.keys())}")
     
+    # Extract model from payload (optional)
+    model_key = payload.get("model")
+    if model_key:
+        print(f"DEBUG: Using model: {model_key}")
+    else:
+        print("DEBUG: Using default model")
+    
     # Require valid session ID for security
     if not session_id:
         return {"result": "Error: No session ID provided"}
@@ -43,36 +50,24 @@ def invoke(payload):
         
         print(f"DEBUG: Stored DataStore for session {session_id}")
         
-        # Create agent and request schedule creation
-        agent = create_schedule_agent(data_store)
         user_message = payload.get("prompt", "")
-        
         schedule_request = f"""Files have been uploaded successfully. Please create a schedule for target date: 2025-10-15
 
 {user_message}"""
         
-        response = agent(schedule_request)
-        return {"result": str(response)}
-    
-    # Check if session has DataStore
     elif session_id in session_datastores:
         print(f"DEBUG: Reusing DataStore for session {session_id}")
-        
-        # Reuse existing DataStore for this session
         data_store = session_datastores[session_id]
+        schedule_request = payload.get("prompt", "Hello")
         
-        # Create agent and process message
-        agent = create_schedule_agent(data_store)
-        user_message = payload.get("prompt", "Hello")
-        response = agent(user_message)
-        return {"result": str(response)}
+    else:
+        print(f"DEBUG: No DataStore found for session {session_id}, creating new one")
+        data_store = DataStore()
+        schedule_request = payload.get("prompt", "Hello")
     
-    # No DataStore for this session - regular conversation
-    print(f"DEBUG: No DataStore found for session {session_id}, creating new one")
-    data_store = DataStore()
-    agent = create_schedule_agent(data_store)
-    user_message = payload.get("prompt", "Hello")
-    response = agent(user_message)
+    # Create agent once with the determined DataStore and model
+    agent = create_schedule_agent(data_store, model_key)
+    response = agent(schedule_request)
     
     return {"result": str(response)}
 

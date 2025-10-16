@@ -46,7 +46,12 @@ When errors occur:
 - Suggest concrete modifications (make patient available at specific timeslots)
 
 When modifying constraints:
-- Confirm changes clearly
+- Use search tools first if user provides partial names
+- Confirm exact patient_id/therapist_id before making changes
+- Use list_available_timeslots() to show valid 20-minute slot options
+- IMPORTANT: Only use exact timeslot formats from list_available_timeslots() (e.g., "09:00-09:20", "09:20-09:40")
+- For time ranges like "09:00-11:00", break down into individual 20-minute slots using the timeslot list
+- Confirm changes clearly with specific IDs and timeslots
 - Explain the expected impact
 - Offer to re-run scheduling immediately
 
@@ -57,10 +62,18 @@ For visualizations:
 
 AGENT_DESCRIPTION = "Unified agent for hospital therapy scheduling - handles creation, visualization, error analysis, and optimization"
 
-# Model configuration
-MODEL_CONFIG = {
+# Available Claude models
+AVAILABLE_MODELS = {
+    "claude-sonnet-4-1": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+    "claude-sonnet-4-5": "us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
+    "claude-haiku-4-5": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
+    "claude-sonnet-3-7": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+}
+
+# Default model configuration
+DEFAULT_MODEL_CONFIG = {
     "provider": "bedrock",
-    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+    "model_id": "us.anthropic.claude-sonnet-4-20250514-v1:0",  # claude-sonnet-4-1
     "temperature": 0.7,
     "max_tokens": 4096,
 }
