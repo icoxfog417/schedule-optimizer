@@ -54,7 +54,7 @@ Resources:
   CodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: schedule-agent-codebuild-role
+      RoleName: !Sub 'schedule-agent-codebuild-role-${AWS::Region}'
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -401,7 +401,7 @@ Resources:
             - HEAD
           Compress: true
           CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad  # CachingDisabled - allows WebSocket
-          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf  # CORS-S3Origin - forwards all headers
+          OriginRequestPolicyId: 216adef6-5c7f-47e4-b989-5492eafa07d3  # AllViewer - forwards all headers including WebSocket
         Origins:
           - Id: VPCOrigin
             DomainName: !GetAtt LoadBalancer.DNSName
@@ -497,6 +497,7 @@ Resources:
   TriggerCodeBuildRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: !Sub 'schedule-agent-trigger-codebuild-role-${AWS::Region}'
       AssumeRolePolicyDocument:
         Version: '2012-10-17'
         Statement:
@@ -553,7 +554,7 @@ Resources:
   ExecutionRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: schedule-agent-execution-role
+      RoleName: !Sub 'schedule-agent-execution-role-${AWS::Region}'
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow
@@ -569,7 +570,7 @@ Resources:
   TaskRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: schedule-agent-task-role
+      RoleName: !Sub 'schedule-agent-task-role-${AWS::Region}'
       AssumeRolePolicyDocument:
         Statement:
           - Effect: Allow

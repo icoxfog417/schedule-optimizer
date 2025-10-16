@@ -73,7 +73,11 @@ class SchedulingPipeline:
         self.store.save_schedule(schedule)
         return schedule
     
-    def full_pipeline(self, date: str) -> Schedule:
-        self.preprocess_all(date)
-        self.build_all_constraints()
+    def full_pipeline(self, date: str, load: bool = False) -> Schedule:
+        if not load:
+            # Fresh creation: preprocess and build constraints
+            self.preprocess_all(date)
+            self.build_all_constraints()
+        # For load=True: skip preprocessing and constraint building, use existing matrices
+        
         return self.schedule(date)

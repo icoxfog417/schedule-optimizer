@@ -134,12 +134,12 @@ class DataStore:
     def load_therapists(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.therapist_file
         encoding = self._detect_encoding(path)
-        return pd.read_csv(path, encoding=encoding)
+        return pd.read_csv(path, encoding=encoding, dtype={'職員ID': str})
     
     def load_prescriptions(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.prescription_file
         encoding = self._detect_encoding(path)
-        return pd.read_csv(path, encoding=encoding)
+        return pd.read_csv(path, encoding=encoding, dtype={'患者ID': str})
     
     def load_shifts(self) -> pd.DataFrame:
         path = self._temp_dir / "raw" / self.shift_file
@@ -150,13 +150,15 @@ class DataStore:
         self._save_interim_csv(data, "normalized_therapists.csv")
     
     def load_normalized_therapists(self) -> pd.DataFrame:
-        return self._load_interim_csv("normalized_therapists.csv")
+        path = self._temp_dir / "interim" / "normalized_therapists.csv"
+        return pd.read_csv(path, dtype={'職員ID': str})
     
     def save_normalized_prescriptions(self, data: pd.DataFrame) -> None:
         self._save_interim_csv(data, "normalized_prescriptions.csv")
     
     def load_normalized_prescriptions(self) -> pd.DataFrame:
-        return self._load_interim_csv("normalized_prescriptions.csv")
+        path = self._temp_dir / "interim" / "normalized_prescriptions.csv"
+        return pd.read_csv(path, dtype={'患者ID': str})
     
     def save_normalized_shifts(self, data: pd.DataFrame) -> None:
         self._save_interim_csv(data, "normalized_shifts.csv")

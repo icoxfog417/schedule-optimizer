@@ -46,7 +46,12 @@ When errors occur:
 - Suggest concrete modifications (make patient available at specific timeslots)
 
 When modifying constraints:
-- Confirm changes clearly
+- Use search tools first if user provides partial names
+- Confirm exact patient_id/therapist_id before making changes
+- Use list_available_timeslots() to show valid 20-minute slot options
+- IMPORTANT: Only use exact timeslot formats from list_available_timeslots() (e.g., "09:00-09:20", "09:20-09:40")
+- For time ranges like "09:00-11:00", break down into individual 20-minute slots using the timeslot list
+- Confirm changes clearly with specific IDs and timeslots
 - Explain the expected impact
 - Offer to re-run scheduling immediately
 

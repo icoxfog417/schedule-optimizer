@@ -42,6 +42,10 @@
           "mcp-remote",
           "https://knowledge-mcp.global.api.aws"
       ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
     }
   },
   "tools": [
