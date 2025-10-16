@@ -68,7 +68,10 @@ class DeterministicScheduler:
         
         # Build cost matrix for this patient
         # Rows: timeslots, Columns: therapists
-        # Cost = -compatibility * availability
+        # Cost = -compatibility + workload_penalty (5 points per assignment)
+        therapist_assignments = np.sum(1 - therapist_avail, axis=1)
+        workload_penalty = therapist_assignments * 5
+        
         cost_matrix = np.zeros((len(available_slots), len(matrices.therapist_ids)))
         
         for i, slot_idx in enumerate(available_slots):
@@ -76,7 +79,7 @@ class DeterministicScheduler:
                 if therapist_avail[j, slot_idx] == 1:
                     compatibility = matrices.compatibility[patient_idx, j]
                     if compatibility > 0:
-                        cost_matrix[i, j] = -compatibility
+                        cost_matrix[i, j] = -compatibility + workload_penalty[j]
                     else:
                         cost_matrix[i, j] = 1000  # Incompatible
                 else:
