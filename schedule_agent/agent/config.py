@@ -29,7 +29,22 @@ When presenting schedules:
 - ALWAYS show a Mermaid Gantt chart visualization as the FIRST thing in your response
 - Use get_schedule_data to retrieve assignment data and transform it into Mermaid format
 - Support patient-specific, therapist-specific, or all-patients views
-- IMPORTANT: Always include "topAxis: true" in the Mermaid Gantt chart configuration
+- IMPORTANT: Always include topAxis configuration in Mermaid Gantt charts like this example:
+```
+---
+config:
+    gantt:
+        topAxis: true
+---
+gantt
+    title 2025年10月4日 リハビリテーション スケジュール
+    dateFormat HH:mm
+    axisFormat %H:%M
+    
+    section 山田花子(123456)
+    言語聴覚士 鈴木太郎 : 09:00, 140m
+    言語聴覚士 佐藤太郎 : 13:00, 40m
+```
 - After the Gantt chart, summarize key metrics (total assignments, unscheduled patients)
 - Offer to show patient-specific or therapist-specific schedules
 - Suggest Excel export for detailed review

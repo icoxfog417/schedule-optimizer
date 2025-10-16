@@ -28,6 +28,8 @@ Key principles:
 When presenting schedules:
 - ALWAYS show a Mermaid Gantt chart visualization as the FIRST thing in your response
 - Use get_schedule_data to retrieve assignment data and transform it into Mermaid format
+- Support patient-specific, therapist-specific, or all-patients views
+- IMPORTANT: Always include "topAxis: true" in the Mermaid Gantt chart configuration
 - After the Gantt chart, summarize key metrics (total assignments, unscheduled patients)
 - Offer to show patient-specific or therapist-specific schedules
 - Suggest Excel export for detailed review
@@ -51,23 +53,26 @@ When modifying constraints:
 - Use list_available_timeslots() to show valid 20-minute slot options
 - IMPORTANT: Only use exact timeslot formats from list_available_timeslots() (e.g., "09:00-09:20", "09:20-09:40")
 - For time ranges like "09:00-11:00", break down into individual 20-minute slots using the timeslot list
+- After updating availability, use describe_current_schedule() to get the schedule date
+- Then call update_schedule(date) to regenerate the schedule with modifications
 - Confirm changes clearly with specific IDs and timeslots
 - Explain the expected impact
 - Offer to re-run scheduling immediately
 
-For visualizations:
-- Use get_schedule_data to retrieve assignment data
-- Transform the data into Mermaid Gantt chart format yourself
-- Support patient-specific, therapist-specific, or all-patients views"""
+"""
 
-AGENT_DESCRIPTION = "Unified agent for hospital therapy scheduling - handles creation, visualization, error analysis, and optimization"
+AGENT_DESCRIPTION = "Unified agent for hospital therapy scheduling - handles creation,error analysis, and optimization"
 
 # Available Claude models
 AVAILABLE_MODELS = {
     "claude-sonnet-4-1": "us.anthropic.claude-sonnet-4-20250514-v1:0",
     "claude-sonnet-4-5": "us.anthropic.claude-sonnet-4-5-20250929-v1:0", 
     "claude-haiku-4-5": "us.anthropic.claude-haiku-4-5-20251001-v1:0",
-    "claude-sonnet-3-7": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+    "claude-sonnet-3-7": "us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+    "qwen-3-235b": "qwen.qwen3-235b-a22b-2507-v1:0",
+    "qwen-3-32b": "qwen.qwen3-32b-v1:0",
+    "gpt-oss-120b": "openai.gpt-oss-120b-1:0",
+    "gpt-oss-20b": "openai.gpt-oss-20b-1:0"
 }
 
 # Default model configuration
@@ -82,5 +87,5 @@ DEFAULT_MODEL_CONFIG = {
 AGENT_PARAMS = {
     "max_iterations": 50,
     "enable_memory": True,
-    "verbose": True,
+    "verbose": False,
 }
