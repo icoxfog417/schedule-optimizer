@@ -116,9 +116,13 @@ st.caption(f"Session: {st.session_state.session_id}")
 # Available models
 AVAILABLE_MODELS = {
     "Claude Sonnet 4.1 (Default)": "claude-sonnet-4-1",
-    "Claude Sonnet 4.5": "claude-sonnet-4-5", 
     "Claude Haiku 4.5": "claude-haiku-4-5",
-    "Claude Sonnet 3.7": "claude-sonnet-3-7"
+    "Claude Sonnet 4.5": "claude-sonnet-4-5", 
+    "Claude Sonnet 3.7": "claude-sonnet-3-7",
+    "Qwen 3 235B": "qwen-3-235b",
+    "Qwen 3 32B": "qwen-3-32b",
+    "GPT OSS 120B": "gpt-oss-120b",
+    "GPT OSS 20B": "gpt-oss-20b"
 }
 
 # Sidebar for file upload
