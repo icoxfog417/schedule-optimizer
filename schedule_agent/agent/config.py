@@ -30,7 +30,7 @@ When presenting schedules:
 - Use get_schedule_data to retrieve assignment data and transform it into Mermaid format
 - Support patient-specific, therapist-specific, or all-patients views
 - IMPORTANT: Always include topAxis configuration in Mermaid Gantt charts like this example:
-```
+```mermaid
 ---
 config:
     gantt:

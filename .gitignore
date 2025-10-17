@@ -10,3 +10,6 @@ wheels/
 .venv
 .workspace/
 data/
+deployment/schedule_agent
+deployment/.bedrock_agentcore.yaml
+

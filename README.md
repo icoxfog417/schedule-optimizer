@@ -2,52 +2,127 @@
 
 Automated patient-therapist scheduling system using deterministic optimization with AI-powered debugging and conversational constraint modification.
 
-## Features
+## Use Case
 
-- **Fast Deterministic Scheduling**: Uses scipy optimization for predictable, reproducible schedules
-- **AI Debug Assistant**: Analyzes scheduling failures and suggests specific fixes
-- **Conversational Optimization**: Modify constraints through natural language
-- **Constraint Matrices**: Transparent, inspectable numpy arrays for all scheduling rules
-- **AgentCore Ready**: Minimal CLI wrappers for easy deployment
+**Problem**: Hospital rehabilitation departments manually create daily schedules matching 50+ patients with 10+ therapists, considering complex constraints:
+- Patient availability (bathing, excretion, medical procedures)
+- Therapist shifts and specializations
+- Therapy duration requirements (120-180 minutes/day)
+- Gender and ward compatibility preferences
 
-## Architecture Overview
+**Manual Process Pain Points**:
+- Takes 2-3 hours daily for scheduling staff
+- Frequent conflicts requiring manual resolution
+- Difficulty optimizing therapist utilization
+- Error-prone constraint checking
 
-```mermaid
-flowchart TD
-    A[Raw Data<br/>therapist.csv<br/>prescription.csv<br/>shift_202510.xlsx] --> B[Preprocessor<br/>cp932 encoding]
-    B --> C[Constraint Matrices<br/>Patient Availability P×18<br/>Therapist Availability Th×18<br/>Compatibility P×Th<br/>Requirements P×1]
-    C --> D[Deterministic Scheduler<br/>scipy optimization]
-    
-    D --> E{Success?}
-    E -->|No| F[AI Debug Agent<br/>Analyze & Suggest Fixes]
-    F --> G[Diagnosis Report]
-    
-    E -->|Yes| H[Initial Schedule]
-    H --> I{Optimization<br/>Needed?}
-    I -->|Yes| J[Conversational Agent<br/>Modify Constraints]
-    J --> K[Update Matrices]
-    K --> D
-    I -->|No| L[Final Schedule<br/>Excel Output]
-    
-    style C fill:#ff9
-    style D fill:#9f9
-    style J fill:#99f
-    style L fill:#9f9
+**Solution**: AI-powered scheduling agent that:
+1. **Automates** constraint-based optimization using scipy
+2. **Debugs** scheduling conflicts with specific recommendations
+3. **Adapts** through conversational constraint modification
+4. **Exports** ready-to-use Excel schedules
+
+## Demonstration
+
+### Typical Workflow
+
+**1. Data Preparation**
 ```
+data/
+├── therapist.csv      # 12 therapists with specializations
+├── prescription.csv   # 47 patients with therapy requirements  
+└── shift_202510.xlsx  # October 2025 availability schedule
+```
+
+**2. Agent Interaction**
+```bash
+$ uv run python main.py
+
+Hospital Schedule Agent initialized.
+✓ Loaded therapist data from therapist.csv
+✓ Loaded prescription data from prescription.csv  
+✓ Loaded shift data from shift_202510.xlsx
+
+You: Create a schedule for October 4th, 2025
+
+Agent: I'll create a schedule for October 4th, 2025...
+       
+       Processing 47 patients and 12 therapists across 18 timeslots...
+       ✓ Built patient availability matrix (47×18)
+       ✓ Built therapist availability matrix (12×18) 
+       ✓ Built compatibility matrix (47×12)
+       ✓ Optimized assignments using scipy
+       
+       Schedule completed: 44 assignments created
+       ⚠️  3 patients remain unscheduled due to conflicts
+
+You: Which patients couldn't be scheduled?
+
+Agent: Unscheduled patients and reasons:
+       
+       • Patient P023 (田中太郎): Needs 180min but only 2 available slots
+         - Unavailable: 9:00-11:00 (入浴), 13:00-14:00 (排泄)
+         - Available: 14:20-15:00, 15:15-15:55 only
+       
+       • Patient P031 (佐藤花子): No compatible therapists available
+         - Requires female therapist (専従 constraint)
+         - Female therapists fully booked during patient's slots
+       
+       • Patient P045 (山田次郎): Therapist availability conflict
+         - Primary therapist T007 unavailable (PN shift ends 12:00)
+         - Patient only available 13:00-16:00
+
+You: Patient P023 can also be available from 11:15 to 12:00
+
+Agent: ✓ Updated Patient P023's availability:
+       Added timeslots: 11:15-11:35, 11:40-12:00
+       
+       Now has 6 available slots (120 minutes) - sufficient for requirement.
+       Reschedule to apply changes?
+
+You: Yes, reschedule
+
+Agent: ✓ Schedule updated successfully!
+       
+       Patient P023 → Therapist T004 (山田療法士)
+       - 11:15-11:35, 11:40-12:00, 14:20-14:40
+       - 14:45-15:05, 15:15-15:35, 15:40-16:00
+       - Total: 120 minutes ✓
+       
+       Current status: 45 assignments, 2 unscheduled
+
+You: Export the schedule to Excel
+
+Agent: ✓ Schedule exported to: schedule_2025-10-04.xlsx
+       
+       File contains 4 sheets:
+       • 詳細スケジュール: Complete assignment list
+       • 患者別: Patient-centered view with attributes
+       • 職員別: Therapist-centered view with workload
+       • サマリー: Statistics and utilization metrics
+       
+       Ready for hospital use! 📋
+```
+
+**3. Results**
+- **Time Saved**: 2-3 hours → 5 minutes
+- **Accuracy**: 100% constraint compliance
+- **Flexibility**: Real-time constraint modification
+- **Integration**: Excel export for existing workflows
 
 ## Quick Start
 
 ### 1. Prepare Data Files
 
-Place the following files in `data/raw/`:
+Place your data files in the `data/` directory:
 
-- **therapist.csv** (encoding: cp932)
+- **data/therapist.csv** (encoding: cp932)
   - Required columns: 職員ID, 漢字氏名, 性別, 職種, 担当病棟, 専従
   
-- **prescription.csv** (encoding: cp932)
+- **data/prescription.csv** (encoding: cp932)
   - Required columns: 患者ID, 氏名, 病棟, 担当療法士, 算定区分, 入浴, 排泄, その他指定時間
   
-- **shift_202510.xlsx**
+- **data/shift_202510.xlsx** (or any .xlsx file)
   - Therapist availability schedule for October 2025
   - Format: Row 2+ contains therapist names in column 4, dates in columns 5+
   - Availability codes: ○ (full day), AN (afternoon), PN (morning)
@@ -58,30 +133,26 @@ Place the following files in `data/raw/`:
 # Install dependencies
 uv sync
 
-# Preprocess raw data
-uv run python -m schedule_agent.cli preprocess --date 2025-10-04
+# Run local agent with data files in data/ directory
+uv run python main.py
 
-# Run scheduler for specific date
-uv run python -m schedule_agent.cli schedule --date 2025-10-04
-
-# Generate Excel output
-uv run python -m schedule_agent.cli visualize --date 2025-10-04
+# Or run remote AgentCore agent (after deployment)
+uv run python main.py --remote
 ```
 
-Output: `data/processed/schedule_2025-10-04.xlsx` with 4 sheets:
-- **詳細**: Detailed assignment list
-- **患者別スケジュール**: Patient schedule with attributes (氏名, 病棟, 担当療法士, 算定区分)
-- **職員別スケジュール**: Staff schedule with attributes (漢字氏名, 性別, 職種, 担当病棟)
-- **サマリー**: Summary statistics
+**Local Mode**: Automatically loads data files from `data/` directory and starts interactive agent.
 
-## Interactive Optimization
+**Remote Mode**: Connects to deployed AgentCore agent. Use `upload` command to send data files to the remote agent.
 
-```bash
-# Start conversational optimization
-uv run python -m schedule_agent.cli optimize --date 2025-10-04
-```
+#### Interactive Agent
 
-### Conversation Example (Japanese)
+The agent provides conversational interface for:
+- Creating schedules from uploaded data
+- Modifying patient availability and constraints  
+- Exporting schedules to Excel
+- Analyzing scheduling conflicts and suggestions
+
+#### Conversation Example (Japanese)
 
 ```
 ユーザー: 患者123は14時から対応可能です
@@ -108,7 +179,7 @@ uv run python -m schedule_agent.cli optimize --date 2025-10-04
             「再スケジュール」と入力して変更を適用してください。
 ```
 
-### Conversation Example (English)
+#### Conversation Example (English)
 
 ```
 User: Patient 123 can be available at 14:00
@@ -135,33 +206,75 @@ Agent: Updated compatibility score for Patient 123 and Therapist T012 to 110.
        Type 'reschedule' to apply changes.
 ```
 
-## Core Components
+## Architecture
+
+### Design Philosophy
+
+**Deterministic Core + AI Enhancement**: Fast, predictable scheduling using scipy optimization, with AI agents for debugging and conversational optimization only when needed.
+
+### System Architecture
+
+```mermaid
+flowchart TD
+    A[Raw Data<br/>therapist.csv<br/>prescription.csv<br/>shift_202510.xlsx] --> B[Preprocessor<br/>cp932 encoding]
+    B --> C[Constraint Matrices<br/>Patient Availability P×18<br/>Therapist Availability Th×18<br/>Compatibility P×Th<br/>Requirements P×1]
+    C --> D[Deterministic Scheduler<br/>scipy optimization]
+    
+    D --> E{Success?}
+    E -->|No| F[AI Debug Agent<br/>Analyze & Suggest Fixes]
+    F --> G[Diagnosis Report]
+    
+    E -->|Yes| H[Initial Schedule]
+    H --> I{Optimization<br/>Needed?}
+    I -->|Yes| J[Conversational Agent<br/>Modify Constraints]
+    J --> K[Update Matrices]
+    K --> D
+    I -->|No| L[Final Schedule<br/>Excel Output]
+    
+    style C fill:#ff9
+    style D fill:#9f9
+    style J fill:#99f
+    style L fill:#9f9
+```
+
+### Core Components
 
 **Module Structure**:
-- `preprocessor.py`: Load and normalize raw data (cp932 encoding)
-- `constraints_builder.py`: Build constraint matrices
-- `scheduler.py`: Deterministic scheduling using scipy
-- `debug_agent.py`: AI debugging agent
-- `constraint_agent.py`: Conversational optimization agent
+- `main.py`: Main entry point with local and remote modes
+- `core/`: Core scheduling logic
+  - `preprocessor.py`: Load and normalize raw data (cp932 encoding)
+  - `constraints_builder.py`: Build constraint matrices
+  - `scheduler.py`: Deterministic scheduling using scipy
+  - `pipeline.py`: Orchestrates the complete workflow
+  - `data_store.py`: Session-based data management
+- `agent/`: AI agent system with conversational tools
+  - `agent.py`: Main agent using Strands framework
+  - `tools.py`: Agent tools for schedule operations
+  - `run.py`: Interactive agent CLI
+  - `config.py`: Agent configuration and model settings
 
 **Data Flow**:
 
 ```mermaid
 flowchart LR
-    A[Raw Data] --> B[Preprocessor]
-    B --> C[interim/<br/>normalized CSVs]
-    C --> D[Constraints Builder]
-    D --> E[interim/<br/>*.npy matrices]
-    E --> F[Scheduler]
-    F --> G[processed/<br/>schedule.xlsx]
+    A[Input Files] --> B[DataStore Session]
+    B --> C[Preprocessor]
+    C --> D[Normalized Data<br/>in Session]
+    D --> E[Constraints Builder]
+    E --> F[Constraint Matrices<br/>in Session]
+    F --> G[Scheduler]
+    G --> H[Schedule<br/>in Session]
+    H --> I[Export to Excel]
     
-    H[User] --> I[Constraint Agent]
-    I --> E
-    E --> F
+    J[User] --> K[Agent Tools]
+    K --> F
+    F --> G
     
-    style C fill:#ffe
-    style E fill:#ffe
-    style G fill:#efe
+    style B fill:#ffe
+    style D fill:#ffe
+    style F fill:#ffe
+    style H fill:#ffe
+    style I fill:#efe
 ```
 
 ## Requirements
@@ -174,35 +287,82 @@ See [spec/design.md](spec/design.md) for detailed architecture documentation.
 
 ```
 schedule-optimizer/
-├── schedule_agent/          # Main package
-│   ├── cli.py              # CLI entry points
+├── main.py                 # Main entry point (local/remote modes)
+├── schedule_agent/         # Main package
+│   ├── agent/              # AI agent system
+│   │   ├── agent.py        # Main agent implementation
+│   │   ├── tools.py        # Agent tools for schedule operations
+│   │   ├── run.py          # Interactive agent CLI
+│   │   └── config.py       # Agent configuration
 │   ├── core/               # Core scheduling logic
+│   │   ├── preprocessor.py # Data loading & normalization
+│   │   ├── constraints_builder.py # Build constraint matrices
+│   │   ├── scheduler.py    # Deterministic scheduling (scipy)
+│   │   ├── pipeline.py     # Workflow orchestration
+│   │   └── data_store.py   # Session-based data management
 │   ├── models/             # Data models
+│   │   └── data_models.py  # Pydantic models
 │   └── utils/              # Utilities
-├── data/                   # Data directories
-│   ├── raw/               # Original files
-│   ├── interim/           # Processed data & matrices
-│   └── processed/         # Final schedules
-└── spec/                  # Documentation
-    ├── requirements.md    # Requirements specification
-    └── design.md         # Architecture design
+│       ├── time_utils.py   # Time slot utilities
+│       └── visualization.py # Excel/Mermaid generation
+├── data/                   # Data files (for local mode)
+│   ├── therapist.csv       # Therapist data
+│   ├── prescription.csv    # Patient prescriptions
+│   └── shift_202510.xlsx   # Shift schedules
+├── tests/                  # Test files
+└── spec/                   # Documentation
+    ├── requirements.md     # Requirements specification
+    └── design.md          # Architecture design
 ```
 
-## Development Rules
+## Appendix: AWS Infrastructure Architecture
 
-### Python Execution
-- Use `uv run` for all Python commands instead of direct `python` calls
-- Examples:
-  ```bash
-  uv run python -m schedule_agent.cli preprocess --date 2025-10-04
-  uv run pytest tests/test_datastore.py -v
-  ```
+### Deployment Architecture
+```mermaid
+graph TB
+    subgraph "User"
+        A[Scheduling Staff] --> B[Web Interface]
+    end
+    
+    subgraph "AWS Cloud"
+        subgraph "Frontend & CDN"
+            C[CloudFront] --> D[Application Load Balancer]
+            D --> E[ECS Fargate]
+        end
+        
+        subgraph "Application Layer"
+            E --> F[Streamlit App]
+        end
+        subgraph "Bedrock AgentCore Runtime"
+              F --> G[Schedule Agent]
+              G --> I[Bedrock]
+        end
+    
+       
+        subgraph "CI/CD Pipeline"
+            J[Developer] --> K[CodeBuild]
+            K --> L[ECR Repository]
+            L --> E
+        end
+    end
+    
+    B --> C
+    
+    style E fill:#ff9
+    style I fill:#ff9
+    style F fill:#efe
+```
 
-### Testing
-- Store all test cases in `tests/` directory
-- Use `pytest` for testing framework
-- Run tests with: `uv run pytest tests/ -v`
+### Key AWS Services Used
 
-### Temporary Work
-- Use `.workspace/` directory for temporary work, analysis, and design documents
-- This directory is for development artifacts, not production code
+**Core Services**:
+- **Amazon ECS Fargate**: Serverless container hosting for Streamlit web app
+- **Amazon Bedrock**: Claude 3.5 Sonnet/Haiku for conversational AI
+- **Amazon Bedrock AgentCore**: Agent runtime and orchestration
+- **Amazon CloudFront**: Global content delivery network
+
+**Supporting Services**:
+- **Application Load Balancer**: Traffic distribution and health checks
+- **Amazon VPC**: Isolated network with public/private subnets
+- **Amazon ECR**: Container image registry
+- **AWS CodeBuild**: Automated container builds from GitHub
