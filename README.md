@@ -2,6 +2,12 @@
 
 Automated patient-therapist scheduling system using deterministic optimization with AI-powered debugging and conversational constraint modification.
 
+**Create Schedule**
+![Create Schedule Demo](./images/schedule_demo_1.png) 
+
+**Adjust the schedule by language**
+![Adjust Schedule by Language Demo](./images/schedule_demo_2.png)| 
+
 ## Use Case
 
 **Problem**: Hospital rehabilitation departments manually create daily schedules matching 50+ patients with 10+ therapists, considering complex constraints:
