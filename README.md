@@ -289,6 +289,8 @@ See [spec/requirements.md](spec/requirements.md) for detailed requirements speci
 
 See [spec/design.md](spec/design.md) for detailed architecture documentation.
 
+See [EXPLAIN_ME.md](EXPLAIN_ME.md) for Japanese explanation of the scheduling algorithm (初級開発者向け).
+
 ## Project Structure
 
 ```
